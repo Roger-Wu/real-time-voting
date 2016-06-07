@@ -1,0 +1,70 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Socket.IO chat</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font: 13px Helvetica, Arial; }
+      form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
+      form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
+      form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
+      #questions { list-style-type: none; margin: 0; padding: 0; }
+      #questions li { padding: 5px 10px; }
+      #questions li:nth-child(odd) { background: #eee; }
+      .votes {color: #5890FF;}
+    </style>
+  </head>
+  <body>
+    <ul id="questions"></ul>
+    <form action="">
+      <input id="m" autocomplete="off" /><button>Send</button>
+    </form>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
+    <script>
+      var socket = io();
+      var userId = -1;
+
+      var qLiTmpl = '<li><button class="vote-button">vote</button>&nbsp;<span class="votes"></span>&nbsp;<span class="question"></span></li>';
+
+      $('form').submit(function(){
+        socket.emit('add question', $('#m').val());
+        $('#m').val('');
+        return false;
+      });
+
+      socket.on('init', function(initObj){
+        console.log(initObj);
+        userId = initObj.userId;
+        resetQuestions(initObj.questions);
+      });
+      socket.on('questions', function(questions){
+        resetQuestions(questions);
+      });
+      socket.on('errmsg', function(msg){
+        console.log(msg);
+      });
+
+      function resetQuestions(questions) {
+        questions.sort(function(q1, q2) {
+          return q2.votes-q1.votes;
+        });
+        console.log(questions);
+
+        $('#questions').empty();
+        questions.forEach(function(question) {
+        var questionLi = $(qLiTmpl);
+        //   questionLi.data("qid", index);
+        questionLi.find('.vote-button').click(function() {
+          socket.emit('upvote question', {'userId': userId, 'qId': question.qId});
+        });
+        questionLi.find('.question').text(question.question);
+        // questionLi.find('.votes').text(Object.keys(question.voters).length);
+        questionLi.find('.votes').text(question.votes);
+        $('#questions').append(questionLi);
+        });
+      }
+    </script>
+  </body>
+</html>
